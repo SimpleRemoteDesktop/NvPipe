@@ -91,7 +91,7 @@ NvPipe requires a C++ compiler and uses the standard CMake compilation and insta
 ```bash
 mkdir build && cd build
 cmake PATH_TO_NVPIPE
-make
+LIBRARY_PATH=/usr/lib/nvidia-396:$LIBRARY_PATH make
 make install
 ```
 

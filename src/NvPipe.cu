@@ -534,7 +534,17 @@ private:
         // Create encoder
         try
         {
-            NV_ENC_BUFFER_FORMAT bufferFormat = (this->format == NVPIPE_RGBA32) ? NV_ENC_BUFFER_FORMAT_ARGB : NV_ENC_BUFFER_FORMAT_NV12;
+            NV_ENC_BUFFER_FORMAT bufferFormat;
+            switch(this->format) {
+                case NVPIPE_RGBA32:
+                    bufferFormat = NV_ENC_BUFFER_FORMAT_ARGB;
+                    break;
+                case NVPIPE_BGRA32:
+                    bufferFormat = NV_ENC_BUFFER_FORMAT_ABGR;
+                    break;
+                default:
+                    bufferFormat = NV_ENC_BUFFER_FORMAT_NV12;
+            }
             this->encoder = std::unique_ptr<NvEncoderCuda>(new NvEncoderCuda(cudaContext, width, height, bufferFormat, 0));
 
             NV_ENC_INITIALIZE_PARAMS initializeParams = { NV_ENC_INITIALIZE_PARAMS_VER };
