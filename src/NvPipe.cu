@@ -77,7 +77,7 @@ inline bool isDevicePointer(const void* ptr)
 
 inline uint64_t getFrameSize(NvPipe_Format format, uint32_t width, uint32_t height)
 {
-    if (format == NVPIPE_RGBA32)
+    if (format == NVPIPE_RGBA32 || format == NVPIPE_BGRA32)
         return width * height * 4;
     else if (format == NVPIPE_UINT4)
         return width * height / 2;
@@ -401,7 +401,7 @@ public:
             this->recreate(width, height);
 
         // RGBA can be directly copied from host or device
-        if (this->format == NVPIPE_RGBA32)
+        if (this->format == NVPIPE_RGBA32 || this->format == NVPIPE_BGRA32)
         {
             CUDA_THROW(cudaMemcpy2D(this->encoder->GetNextInputFrame()->inputPtr, width * 4, src, srcPitch, width * 4, height, isDevicePointer(src) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice),
                        "Failed to copy input frame");
