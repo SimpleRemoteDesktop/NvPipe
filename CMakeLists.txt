@@ -45,9 +45,9 @@ list(APPEND CUDA_NVCC_FLAGS "-std=c++11")
 
 # Options
 option(NVPIPE_WITH_ENCODER "Enables the NvPipe encoding interface." ON)
-option(NVPIPE_WITH_DECODER "Enables the NvPipe decoding interface." ON)
-option(NVPIPE_WITH_OPENGL "Enables the NvPipe OpenGL interface." ON)
-option(NVPIPE_BUILD_EXAMPLES "Builds the NvPipe example applications (requires both encoder and decoder)." ON)
+option(NVPIPE_WITH_DECODER "Enables the NvPipe decoding interface." OFF)
+option(NVPIPE_WITH_OPENGL "Enables the NvPipe OpenGL interface." OFF)
+option(NVPIPE_BUILD_EXAMPLES "Builds the NvPipe example applications (requires both encoder and decoder)." OFF)
 
 # Header
 configure_file(src/NvPipe.h.in include/NvPipe.h @ONLY)
