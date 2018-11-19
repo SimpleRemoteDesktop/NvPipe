@@ -333,6 +333,18 @@ private:
     void GetEncodedPacket(std::vector<NV_ENC_OUTPUT_PTR> &vOutputBuffer, std::vector<std::vector<uint8_t>> &vPacket, bool bOutputDelay);
 
     /**
+    *  @brief This is a private function which is used to initialize the bitstream buffers.
+    *  This is only used in the encoding mode.
+    */
+    void InitializeBitstreamBuffer();
+
+    /**
+    *  @brief This is a private function which is used to destroy the bitstream buffers.
+    *  This is only used in the encoding mode.
+    */
+    void DestroyBitstreamBuffer();
+
+    /**
     *  @brief This is a private function which is used to initialize MV output buffers.
     *  This is only used in ME-only Mode.
     */

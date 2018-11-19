@@ -281,14 +281,6 @@ void NvEncoder::CreateEncoder(const NV_ENC_INITIALIZE_PARAMS* pEncoderParams)
     m_nEncoderBuffer = m_encodeConfig.frameIntervalP + m_encodeConfig.rcParams.lookaheadDepth + m_nExtraOutputDelay;
     m_nOutputDelay = m_nEncoderBuffer - 1;
     m_vMappedInputBuffers.resize(m_nEncoderBuffer, nullptr);
-    m_vBitstreamOutputBuffer.resize(m_nEncoderBuffer, nullptr);
-
-    for (int i = 0; i < m_nEncoderBuffer; i++) 
-    {
-        NV_ENC_CREATE_BITSTREAM_BUFFER createBitstreamBuffer = { NV_ENC_CREATE_BITSTREAM_BUFFER_VER };
-        NVENC_API_CALL(m_nvenc.nvEncCreateBitstreamBuffer(m_hEncoder, &createBitstreamBuffer));
-        m_vBitstreamOutputBuffer[i] = createBitstreamBuffer.bitstreamBuffer;
-    }
 
     m_vpCompletionEvent.resize(m_nEncoderBuffer, nullptr);
 #if defined(_WIN32)
@@ -305,6 +297,11 @@ void NvEncoder::CreateEncoder(const NV_ENC_INITIALIZE_PARAMS* pEncoderParams)
     {
         m_vMappedRefBuffers.resize(m_nEncoderBuffer, nullptr);
         InitializeMVOutputBuffer();
+    }
+    else
+    {
+        m_vBitstreamOutputBuffer.resize(m_nEncoderBuffer, nullptr);
+        InitializeBitstreamBuffer();
     }
 
     AllocateInputBuffers(m_nEncoderBuffer);
@@ -329,15 +326,6 @@ void NvEncoder::DestroyHWEncoder()
         return;
     }
 
-    for (uint32_t i = 0; i < m_vBitstreamOutputBuffer.size(); i++)
-    {
-        if (m_vBitstreamOutputBuffer[i])
-        {
-            m_nvenc.nvEncDestroyBitstreamBuffer(m_hEncoder, m_vBitstreamOutputBuffer[i]);
-        }
-    }
-    m_vBitstreamOutputBuffer.clear();
-
 #if defined(_WIN32)
     for (uint32_t i = 0; i < m_vpCompletionEvent.size(); i++)
     {
@@ -355,6 +343,10 @@ void NvEncoder::DestroyHWEncoder()
     if (m_bMotionEstimationOnly)
     {
         DestroyMVOutputBuffer();
+    }
+    else
+    {
+        DestroyBitstreamBuffer();
     }
 
     m_nvenc.nvEncDestroyEncoder(m_hEncoder);
@@ -574,18 +566,21 @@ void NvEncoder::RegisterResources(std::vector<void*> inputframes, NV_ENC_INPUT_R
 
 void NvEncoder::UnregisterResources()
 {
-    // Incase of error it is possible for buffers still mapped to encoder.
-    // flush the encoder queue and then unmapped it if any surface is still mapped
-    try
+    if (!m_bMotionEstimationOnly)
     {
-        std::vector<std::vector<uint8_t>> vPacket;
-        EndEncode(vPacket);
-    }
-    catch (...)
-    {
+        // Incase of error it is possible for buffers still mapped to encoder.
+        // flush the encoder queue and then unmapped it if any surface is still mapped
+        try
+        {
+            std::vector<std::vector<uint8_t>> vPacket;
+            EndEncode(vPacket);
+        }
+        catch (...)
+        {
 
+        }
     }
-    if (m_bMotionEstimationOnly)
+    else
     {
         for (uint32_t i = 0; i < m_vMappedRefBuffers.size(); ++i)
         {
@@ -846,6 +841,29 @@ void NvEncoder::GetInitializeParams(NV_ENC_INITIALIZE_PARAMS *pInitializeParams)
     *pEncodeConfig = m_encodeConfig;
     *pInitializeParams = m_initializeParams;
     pInitializeParams->encodeConfig = pEncodeConfig;
+}
+
+void NvEncoder::InitializeBitstreamBuffer()
+{
+    for (int i = 0; i < m_nEncoderBuffer; i++)
+    {
+        NV_ENC_CREATE_BITSTREAM_BUFFER createBitstreamBuffer = { NV_ENC_CREATE_BITSTREAM_BUFFER_VER };
+        NVENC_API_CALL(m_nvenc.nvEncCreateBitstreamBuffer(m_hEncoder, &createBitstreamBuffer));
+        m_vBitstreamOutputBuffer[i] = createBitstreamBuffer.bitstreamBuffer;
+    }
+}
+
+void NvEncoder::DestroyBitstreamBuffer()
+{
+    for (uint32_t i = 0; i < m_vBitstreamOutputBuffer.size(); i++)
+    {
+        if (m_vBitstreamOutputBuffer[i])
+        {
+            m_nvenc.nvEncDestroyBitstreamBuffer(m_hEncoder, m_vBitstreamOutputBuffer[i]);
+        }
+    }
+
+    m_vBitstreamOutputBuffer.clear();
 }
 
 void NvEncoder::InitializeMVOutputBuffer()

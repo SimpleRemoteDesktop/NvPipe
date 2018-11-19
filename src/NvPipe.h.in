@@ -93,6 +93,15 @@ NVPIPE_EXPORT NvPipe* NvPipe_CreateEncoder(NvPipe_Format format, NvPipe_Codec co
 
 
 /**
+ * @brief Reconfigures the encoder with a new bitrate and target frame rate.
+ * @param nvp Encoder instance.
+ * @param bitrate Bitrate in bit per second, e.g., 32 * 1000 * 1000 = 32 Mbps (for lossy compression only).
+ * @param targetFrameRate At this frame rate the effective data rate approximately equals the bitrate (for lossy compression only).
+ */
+NVPIPE_EXPORT void NvPipe_SetBitrate(NvPipe* nvp, uint64_t bitrate, uint32_t targetFrameRate);
+
+
+/**
  * @brief Encodes a single frame from device or host memory.
  * @param nvp Encoder instance.
  * @param src Device or host memory pointer.

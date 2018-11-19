@@ -77,12 +77,12 @@ int main(int argc, char* argv[])
         std::cout << "Frame | Encode (ms) | Decode (ms) | Size (KB)" << std::endl;
 
         // Create encoder
-        NvPipe* encoder = NvPipe_CreateEncoder(NVPIPE_RGBA32, codec, compression, bitrateMbps * 1000 * 1000, targetFPS);
+        NvPipe* encoder = NvPipe_CreateEncoder(NVPIPE_BGRA32, codec, compression, bitrateMbps * 1000 * 1000, targetFPS);
         if (!encoder)
             std::cerr << "Failed to create encoder: " << NvPipe_GetError(NULL) << std::endl;
 
         // Create decoder
-        NvPipe* decoder = NvPipe_CreateDecoder(NVPIPE_RGBA32, codec);
+        NvPipe* decoder = NvPipe_CreateDecoder(NVPIPE_BGRA32, codec);
         if (!decoder)
             std::cerr << "Failed to create decoder: " << NvPipe_GetError(NULL) << std::endl;
 
@@ -123,12 +123,12 @@ int main(int argc, char* argv[])
         std::cout << "Frame | Encode (ms) | Decode (ms) | Size (KB)" << std::endl;
 
         // Create encoder
-        NvPipe* encoder = NvPipe_CreateEncoder(NVPIPE_RGBA32, codec, compression, bitrateMbps * 1000 * 1000, targetFPS);
+        NvPipe* encoder = NvPipe_CreateEncoder(NVPIPE_BGRA32, codec, compression, bitrateMbps * 1000 * 1000, targetFPS);
         if (!encoder)
             std::cerr << "Failed to create encoder: " << NvPipe_GetError(NULL) << std::endl;
 
         // Create decoder
-        NvPipe* decoder = NvPipe_CreateDecoder(NVPIPE_RGBA32, codec);
+        NvPipe* decoder = NvPipe_CreateDecoder(NVPIPE_BGRA32, codec);
         if (!decoder)
             std::cerr << "Failed to create decoder: " << NvPipe_GetError(NULL) << std::endl;
 

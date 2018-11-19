@@ -17,12 +17,12 @@
 #include <sstream>
 #include <iterator>
 #include <cstring>
+#include <functional>
 #include "../Utils/Logger.h"
 
 extern simplelogger::Logger *logger;
 
 #ifndef _WIN32
-#include <cstring>
 inline bool operator==(const GUID &guid1, const GUID &guid2) {
     return !memcmp(&guid1, &guid2, sizeof(GUID));
 }

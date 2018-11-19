@@ -141,6 +141,11 @@ void NvEncoderCuda::CopyToDeviceFrame(CUcontext device,
     uint32_t numChromaPlanes,
     bool bUnAlignedDeviceCopy)
 {
+    if (srcMemoryType != CU_MEMORYTYPE_HOST && srcMemoryType != CU_MEMORYTYPE_DEVICE)
+    {
+        NVENC_THROW_ERROR("Invalid source memory type for copy", NV_ENC_ERR_INVALID_PARAM);
+    }
+
     CUDA_DRVAPI_CALL(cuCtxPushCurrent(device));
 
     uint32_t srcPitch = nSrcPitch ? nSrcPitch : NvEncoder::GetWidthInBytes(pixelFormat, width);
@@ -221,6 +226,11 @@ void NvEncoderCuda::CopyToDeviceFrame(CUcontext device,
     uint32_t numChromaPlanes,
     bool bUnAlignedDeviceCopy)
 {
+    if (srcMemoryType != CU_MEMORYTYPE_HOST && srcMemoryType != CU_MEMORYTYPE_DEVICE)
+    {
+        NVENC_THROW_ERROR("Invalid source memory type for copy", NV_ENC_ERR_INVALID_PARAM);
+    }
+
     CUDA_DRVAPI_CALL(cuCtxPushCurrent(device));
 
     uint32_t srcPitch = nSrcPitch ? nSrcPitch : NvEncoder::GetWidthInBytes(pixelFormat, width);

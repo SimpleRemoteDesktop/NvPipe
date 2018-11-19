@@ -7,7 +7,7 @@ networked interactive server/client application.
 
 Designed for both remote rendering solutions and general compression of arbitrary image data, NvPipe accepts frames in various formats and supports access to host memory, CUDA device memory, OpenGL textures and OpenGL pixel buffer objects. 
 
-Supported formats are 32 bit RGBA frames (8 bit per channel; alpha is not supported by the underlying video codecs and is ignored) and unsigned integer grayscale frames with 4 bit, 8 bit, 16 bit or 32 bit per pixel.
+Supported formats are 32 bit BGRA frames (8 bit per channel; alpha is not supported by the underlying video codecs and is ignored) and unsigned integer grayscale frames with 4 bit, 8 bit, 16 bit or 32 bit per pixel.
 
 Besides conventional lossy video compression based on target bitrate and framerate, also fully lossless compression is available enabling exact bit pattern reconstruction.
 
@@ -30,16 +30,16 @@ A sample encoding scenario:
 ...
 
 uint32_t width = ..., height = ...; // Image resolution
-uint8_t* rgba = ...; // Image data in device or host memory
+uint8_t* bgra = ...; // Image data in device or host memory
 uint8_t* buffer = ...; // Buffer for compressed output in host memory    
    
 // Create encoder
-NvPipe* encoder = NvPipe_CreateEncoder(NVPIPE_RGBA32, NVPIPE_H264, NVPIPE_LOSSY, 32 * 1000 * 1000, 90); // 32 Mbps @ 90 Hz
+NvPipe* encoder = NvPipe_CreateEncoder(NVPIPE_BGRA32, NVPIPE_H264, NVPIPE_LOSSY, 32 * 1000 * 1000, 90); // 32 Mbps @ 90 Hz
 
 while (frameAvailable) 
 {
     // Encode next frame
-    uint64_t compressedSize = NvPipe_Encode(encoder, rgba, width * 4, buffer, bufferSize, width, height, false);
+    uint64_t compressedSize = NvPipe_Encode(encoder, bgra, width * 4, buffer, bufferSize, width, height, false);
     
     // Send the frame size and compressed stream to the consuming side
     send(socket, &compressedSize, sizeof(uint64_t), ...);
@@ -58,11 +58,11 @@ The corresponding decoding scenario:
 ...
 
 uint32_t width = ..., height = ...; // Image resolution
-uint8_t* rgba = ...; // Image destination in device or host memory
+uint8_t* bgra = ...; // Image destination in device or host memory
 uint8_t* buffer = ...; // Buffer for incoming packets  
 
 // Create decoder
-NvPipe* decoder = NvPipe_CreateDecoder(NVPIPE_RGBA32, NVPIPE_H264);
+NvPipe* decoder = NvPipe_CreateDecoder(NVPIPE_BGRA32, NVPIPE_H264);
 
 while (frameAvailable) 
 {
@@ -73,7 +73,7 @@ while (frameAvailable)
     receive(socket, ...);
     
     // Decode frame
-    NvPipe_Decode(decoder, buffer, compressedSize, rgba, width, height); 
+    NvPipe_Decode(decoder, buffer, compressedSize, bgra, width, height);
     
     // Use frame (blit/save/...)
     ...
@@ -177,7 +177,7 @@ Frame | Encode (ms) | Decode (ms) | Size (KB)
 Note that the overall compressed sizes differ in the two examples as they use different images for input. 
 
 The `lossless` example demonstrates the usage of NvPipe for lossless integer data compression. An 8 bit unsigned integer frame is created, compressed, and the result verified for bitwise correctness after decompression.
-The following example output shows that while correctness is always guarenteed due to lossless compression, the chosen pixel format has crucial impact on the compressed output size.
+The following example output shows that while correctness is always guaranteed due to lossless compression, the chosen pixel format has crucial impact on the compressed output size.
 ```bash
 $ ./nvpExampleLossless 
 NvPipe example application: Tests lossless compression of a grayscale integer frame.

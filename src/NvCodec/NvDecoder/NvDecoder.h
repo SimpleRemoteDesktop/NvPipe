@@ -89,7 +89,7 @@ public:
     *  starting to decode any frames.
     */
     NvDecoder(CUcontext cuContext, int nWidth, int nHeight, bool bUseDeviceFrame, cudaVideoCodec eCodec, std::mutex *pMutex = NULL,
-        bool bLowLatency = false, bool bDeviceFramePitched = false, const Rect *pCropRect = NULL, const Dim *pResizeDim = NULL);
+        bool bLowLatency = false, bool bDeviceFramePitched = false, const Rect *pCropRect = NULL, const Dim *pResizeDim = NULL, int maxWidth = 0, int maxHeight = 0);
     ~NvDecoder();
 
     /**
@@ -151,6 +151,11 @@ public:
     */
     void UnlockFrame(uint8_t **ppFrame, int nFrame);
 
+    /**
+    *   @brief  This function allow app to set decoder reconfig params
+    */
+    int setReconfigParams(const Rect * pCropRect, const Dim * pResizeDim);
+
 private:
     /**
     *   @brief  Callback function to be registered for getting a callback when decoding of sequence starts
@@ -185,6 +190,11 @@ private:
     */
     int HandlePictureDisplay(CUVIDPARSERDISPINFO *pDispInfo);
 
+    /**
+    *   @brief  This function reconfigure decoder if there is a change in sequence params.
+    */
+    int ReconfigureDecoder(CUVIDEOFORMAT *pVideoFormat);
+
 private:
     CUcontext m_cuContext = NULL;
     CUvideoctxlock m_ctxLock;
@@ -193,13 +203,15 @@ private:
     CUvideodecoder m_hDecoder = NULL;
     bool m_bUseDeviceFrame;
     // dimension of the output
-    int m_nWidth = 0, m_nHeight = 0;
+    unsigned int m_nWidth = 0, m_nHeight = 0;
     // height of the mapped surface 
     int m_nSurfaceHeight = 0;
+    int m_nSurfaceWidth = 0;
     cudaVideoCodec m_eCodec = cudaVideoCodec_NumCodecs;
     cudaVideoChromaFormat m_eChromaFormat;
     int m_nBitDepthMinus8 = 0;
     CUVIDEOFORMAT m_videoFormat = {};
+    Rect m_displayRect = {};
     // stock of frames
     std::vector<uint8_t *> m_vpFrame; 
     // decoded frames for return
@@ -207,6 +219,7 @@ private:
     // timestamps of decoded frames
     std::vector<int64_t> m_vTimestamp;
     int m_nDecodedFrame = 0, m_nDecodedFrameReturned = 0;
+    int m_nDecodePicCnt = 0, m_nPicNumInDecodeOrder[32];
     bool m_bEndDecodeDone = false;
     std::mutex m_mtxVPFrame;
     int m_nFrameAlloc = 0;
@@ -217,4 +230,7 @@ private:
     Dim m_resizeDim = {};
 
     std::ostringstream m_videoInfo;
+    unsigned int m_nMaxWidth = 0, m_nMaxHeight = 0;
+    bool m_bReconfigExternal = false;
+    bool m_bReconfigExtPPChange = false;
 };

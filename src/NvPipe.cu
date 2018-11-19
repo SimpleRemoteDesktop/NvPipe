@@ -72,7 +72,12 @@ inline bool isDevicePointer(const void* ptr)
 {
     struct cudaPointerAttributes attr;
     const cudaError_t perr = cudaPointerGetAttributes(&attr, ptr);
+
+#if (CUDA_VERSION >= 10000)
+    return (perr == cudaSuccess) && (attr.type == cudaMemoryTypeDevice);
+#else
     return (perr == cudaSuccess) && (attr.memoryType == cudaMemoryTypeDevice);
+#endif
 }
 
 inline uint64_t getFrameSize(NvPipe_Format format, uint32_t width, uint32_t height)
@@ -390,6 +395,30 @@ public:
             cudaFree(this->deviceBuffer);
     }
 
+    void setBitrate(uint64_t bitrate, uint32_t targetFrameRate)
+    {
+        NV_ENC_CONFIG config;
+        memset(&config, 0, sizeof(config));
+        config.version = NV_ENC_CONFIG_VER;
+        config.rcParams.averageBitRate = bitrate;
+
+        NV_ENC_RECONFIGURE_PARAMS reconfigureParams;
+        memset(&reconfigureParams, 0, sizeof(reconfigureParams));
+        reconfigureParams.version = NV_ENC_RECONFIGURE_PARAMS_VER;
+        reconfigureParams.resetEncoder = 1;
+        reconfigureParams.forceIDR = 1;
+        reconfigureParams.reInitEncodeParams.encodeConfig = &config;
+
+        encoder->GetInitializeParams(&reconfigureParams.reInitEncodeParams);
+        reconfigureParams.reInitEncodeParams.frameRateNum = targetFrameRate;
+        reconfigureParams.reInitEncodeParams.frameRateDen = 1;
+
+        encoder->Reconfigure(&reconfigureParams);
+
+        this->bitrate = bitrate;
+        this->targetFrameRate = targetFrameRate;
+    }
+
     uint64_t encode(const void* src, uint64_t srcPitch, uint8_t *dst, uint64_t dstSize, uint32_t width, uint32_t height, bool forceIFrame)
     {
         // Recreate encoder if size changed
@@ -403,7 +432,8 @@ public:
         // RGBA can be directly copied from host or device
         if (this->format == NVPIPE_RGBA32 || this->format == NVPIPE_BGRA32)
         {
-            CUDA_THROW(cudaMemcpy2D(this->encoder->GetNextInputFrame()->inputPtr, width * 4, src, srcPitch, width * 4, height, isDevicePointer(src) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice),
+            const NvEncInputFrame* f = this->encoder->GetNextInputFrame();
+            CUDA_THROW(cudaMemcpy2D(f->inputPtr, f->pitch, src, srcPitch, width * 4, height, isDevicePointer(src) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice),
                        "Failed to copy input frame");
         }
         // Other formats need to be copied to the device and converted
@@ -463,8 +493,8 @@ public:
 
     uint64_t encodeTexture(uint32_t texture, uint32_t target, uint8_t* dst, uint64_t dstSize, uint32_t width, uint32_t height, bool forceIFrame)
     {
-        if (this->format != NVPIPE_RGBA32)
-            throw Exception("The OpenGL interface only supports the RGBA32 format");
+        if (this->format != NVPIPE_BGRA32)
+            throw Exception("The OpenGL interface only supports the BGRA32 format");
 
         // Recreate encoder if size changed
         this->recreate(width, height);
@@ -476,7 +506,9 @@ public:
         cudaArray_t array;
         CUDA_THROW(cudaGraphicsSubResourceGetMappedArray(&array, resource, 0, 0),
                    "Failed get texture graphics resource array");
-        CUDA_THROW(cudaMemcpy2DFromArray(this->encoder->GetNextInputFrame()->inputPtr, width * 4, array, 0, 0, width * 4, height, cudaMemcpyDeviceToDevice),
+
+        const NvEncInputFrame* f = this->encoder->GetNextInputFrame();
+        CUDA_THROW(cudaMemcpy2DFromArray(f->inputPtr, f->pitch, array, 0, 0, width * 4, height, cudaMemcpyDeviceToDevice),
                    "Failed to copy from texture array");
 
         // Encode
@@ -491,8 +523,8 @@ public:
 
     uint64_t encodePBO(uint32_t pbo, uint8_t* dst, uint64_t dstSize, uint32_t width, uint32_t height, bool forceIFrame)
     {
-        if (this->format != NVPIPE_RGBA32)
-            throw Exception("The OpenGL interface only supports the RGBA32 format");
+        if (this->format != NVPIPE_BGRA32)
+            throw Exception("The OpenGL interface only supports the BGRA32 format");
 
         // Map PBO and copy input to encoder
         cudaGraphicsResource_t resource = this->registry.getPBOGraphicsResource(pbo, width, height, cudaGraphicsRegisterFlagsReadOnly);
@@ -713,7 +745,7 @@ public:
             // Convert to output format
             uint8_t* dstDevice = (uint8_t*) (copyToHost ? this->deviceBuffer : dst);
 
-            if (this->format == NVPIPE_RGBA32)
+            if (this->format == NVPIPE_BGRA32)
             {
                 Nv12ToBgra32(decoded, width, dstDevice, width * 4, width, height);
             }
@@ -765,8 +797,8 @@ public:
 
     uint64_t decodeTexture(const uint8_t* src, uint64_t srcSize, uint32_t texture, uint32_t target, uint32_t width, uint32_t height)
     {
-        if (this->format != NVPIPE_RGBA32)
-            throw Exception("The OpenGL interface only supports the RGBA32 format");
+        if (this->format != NVPIPE_BGRA32)
+            throw Exception("The OpenGL interface only supports the BGRA32 format");
 
         // Recreate decoder if size changed
         this->recreate(width, height);
@@ -800,8 +832,8 @@ public:
 
     uint64_t decodePBO(const uint8_t* src, uint64_t srcSize, uint32_t pbo, uint32_t width, uint32_t height)
     {
-        if (this->format != NVPIPE_RGBA32)
-            throw Exception("The OpenGL interface only supports the RGBA32 format");
+        if (this->format != NVPIPE_BGRA32)
+            throw Exception("The OpenGL interface only supports the BGRA32 format");
 
         // Map PBO for output
         cudaGraphicsResource_t resource = this->registry.getPBOGraphicsResource(pbo, width, height, cudaGraphicsRegisterFlagsWriteDiscard);
@@ -954,6 +986,25 @@ NVPIPE_EXPORT NvPipe* NvPipe_CreateEncoder(NvPipe_Format format, NvPipe_Codec co
     }
 
     return instance;
+}
+
+NVPIPE_EXPORT void NvPipe_SetBitrate(NvPipe* nvp, uint64_t bitrate, uint32_t targetFrameRate)
+{
+    Instance* instance = static_cast<Instance*>(nvp);
+    if (!instance->encoder)
+    {
+        instance->error = "Invalid NvPipe encoder.";
+        return;
+    }
+
+    try
+    {
+        return instance->encoder->setBitrate(bitrate, targetFrameRate);
+    }
+    catch (Exception& e)
+    {
+        instance->error = e.getErrorString();
+    }
 }
 
 NVPIPE_EXPORT uint64_t NvPipe_Encode(NvPipe* nvp, const void* src, uint64_t srcPitch, uint8_t* dst, uint64_t dstSize, uint32_t width, uint32_t height, bool forceIFrame)
